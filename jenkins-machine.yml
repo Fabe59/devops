@@ -1,0 +1,152 @@
+---
+
+- hosts: 192.168.33.30
+
+  tasks:
+   - name : Update APT
+     become: yes
+     apt:
+       update_cache: yes
+
+   - name: Install OpenJDK Java
+     become: yes
+     apt:
+       name: openjdk-8-jdk
+       state: present
+
+   - name: Install Maven
+     become: yes
+     apt:
+       name: maven
+       state: latest
+
+   - name: Import Key
+     apt_key:
+       state: present
+       url: https://jenkins-ci.org/redhat/jenkins-ci.org.key
+     become: yes
+
+   - name: Download jenkins.repo
+     apt_repository:
+       repo: 'deb http://pkg.jenkins.io/debian-stable binary/'
+     become: yes
+
+   - name: Install Jenkins
+     become: yes
+     apt:
+        name: jenkins
+
+   - name: Starting Jenkins
+     become: yes
+     service: 
+       name: jenkins
+       state: started
+
+   - name: ajout d'une clé apt artifactory
+     become: yes
+     apt_key:
+       url: https://api.bintray.com/orgs/jfrog/keys/gpg/public.key 
+       state: present
+  
+   - name: ajout du repository apt pour artifactory
+     become: yes
+     apt_repository: 
+       repo: deb https://jfrog.bintray.com/artifactory-debs bionic main
+       state: present
+
+   - name: installer artifactory
+     become: yes
+     apt:
+       update_cache: yes
+       name: jfrog-artifactory-oss
+
+   - name: activer artifactory
+     become: yes
+     service:
+       name: artifactory
+       state: started
+
+   - name : Create group
+     become: yes
+     group:
+       name: sonar
+       state: present
+
+   - name: create user sonar to manage the sonar service
+     become: yes
+     user:
+       name: sonar
+       group: sonar
+       createhome: no
+       shell: /bin/false
+       state: present
+
+   - name: download sonarqube
+     become: yes
+     get_url:
+       url: https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-7.5.zip
+       dest: /tmp/sonarqube-7.5.zip
+     retries: 5
+     delay: 10
+
+   - name: decompress sonarqube archive
+     become: yes
+     unarchive:
+       src: /tmp/sonarqube-7.5.zip
+       dest: /opt/
+       owner: sonar
+       group: sonar
+       copy: no
+
+   - name: remove sonar archive
+     become: yes
+     file:
+       path: /tmp/sonarqube-7.5.zip
+       state: absent
+
+   - name: create systemd service for sonar
+     become: yes
+     template:
+       src: sonar.service.j2
+       dest: /etc/systemd/system/sonar.service
+       owner: root
+       group: root
+       mode: 0755
+
+   - name: reload systemd daemon
+     become: yes
+     systemd:
+       daemon_reload: yes
+
+   - name: start sonar service
+     become: yes
+     service:
+       name: sonar
+       state: started
+       enabled: yes
+
+   - name: download sonar-scanner
+     become: yes
+     get_url:
+       url: https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.5.0.2216-linux.zip
+       dest: ./sonar-scanner-cli-4.5.0.2216-linux.zip
+     retries: 5
+     delay: 10
+
+   - name: decompress sonar scanner archive
+     become: yes
+     unarchive:
+       src: ./sonar-scanner-cli-4.5.0.2216-linux.zip
+       dest: ./
+       copy: no
+
+   - name: move sonar scanner to /opt/sonar_scanner
+     become: yes
+     command: mv sonar-scanner-4.5.0.2216-linux /opt/sonar_scanner
+  
+   - name: remove sonar scanner archive
+     become: yes
+     file:
+       path: ./
+       state: absent
+
