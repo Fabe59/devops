@@ -1,0 +1,16 @@
+[Unit]
+Description=Tomcat - instance %i
+After=syslog.target network.target
+
+[Service]
+Type=forking
+User=tomcat
+Group=tomcat
+Environment="CATALINA_PID=/var/tomcat/%i/run/tomcat.pid"
+ExecStart=/opt/tomcat/bin/startup.sh start
+ExecStop=/opt/tomcat/bin/shutdown.sh stop
+#RestartSec=10
+#Restart=always
+
+[Install]
+WantedBy=multi-user.target
