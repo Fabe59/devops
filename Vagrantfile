@@ -40,4 +40,14 @@ Vagrant.configure("2") do |config|
         end
   end
 
+    config.vm.define "monitoring-server" do |subconfig|
+        subconfig.vm.box = "ubuntu/xenial64"
+        subconfig.vm.hostname ="monitoring-server"
+        subconfig.vm.network "private_network", ip: "192.168.33.50"
+        subconfig.vm.provider "virtualbox" do |vb|
+                vb.memory = "8000"
+                vb.cpus = "2"
+        end
+  end
+
 end
